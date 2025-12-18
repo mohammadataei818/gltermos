@@ -1,0 +1,8 @@
+<br><br><br>
+<h2>Delete Manager Confs</h2>
+{% set result0 = os.listdir('./gl_term/templates/modules/Manager/Confs/') %}
+{% for a in result0 %}
+{% set result1 = open('./gl_term/templates/modules/Manager/Confs/' + a).read() %}
+{% set asd = result1.split('\n') %}
+<a href="/modules/Manager/deleteapi?a={{ a }}">{{ asd[0] }}</a><br>
+{% endfor %}

@@ -1,0 +1,16 @@
+
+<h2>apps</h2><br>
+{% set scanresult = os.listdir('./gl_term/templates/modules') %}
+{% for i in scanresult %}
+{%  if i == "appx_list" %}
+{%  else %}
+<Div class="card-container">
+<div class="card ct-bar c-w" onclick="ChangeContentMain('{{ i }}')">
+  <img src="/static/appxassets/{{ i }}/icon.png" alt="Avatar" class="card-img">
+  <div class="container">
+    <h4><b>{{ i }}</b></h4> 
+  </div>
+</div>
+</Div>
+{% endif %}
+{% endfor %}

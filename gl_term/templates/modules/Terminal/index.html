@@ -1,0 +1,2 @@
+<input id="of-cmd-input" class="input-box"><a href="#" class="btn-a" onclick="ChangeContentMain('Terminal','?cmd=' + document.getElementById('of-cmd-input').value);">Submit</a>
+<pre>{% if not request.args.get('cmd') == None %}{{ getoutput(request.args.get('cmd').replace('\n','<br>')) | safe }}{% endif %}</pre>
