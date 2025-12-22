@@ -1,0 +1,148 @@
+<style>
+  :root {
+    --btn-bg: #ffffff;
+    --btn-border: #cfd4dc;
+    --btn-hover: #f3f5f7;
+    --btn-danger: #e5533d;
+    --btn-danger-hover: #c64531;
+    --text-muted: #6c757d;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    margin: 4px 2px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #212529;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .btn:hover {
+    background: var(--btn-hover);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  .btn-danger {
+    color: #fff;
+    background: var(--btn-danger);
+    border-color: var(--btn-danger);
+  }
+
+  .btn-danger:hover {
+    background: var(--btn-danger-hover);
+  }
+
+  .muted {
+    color: var(--text-muted);
+  }
+
+  textarea {
+    box-sizing: border-box;
+    padding: 10px;
+    line-height: 1.4;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    resize: vertical;
+    font-family: monospace;
+  }
+
+  hr {
+    margin: 16px 0;
+    border: none;
+    border-top: 1px solid #e1e4e8;
+  }
+</style>
+
+{% set file = request.args.get('file') %}
+
+{% if not file %}
+  <p class="muted">No file specified.</p>
+
+{% else %}
+  {% set ext = file.rsplit('.', 1)[-1].lower() if '.' in file else '' %}
+  {% set parent_path = file.rsplit('/', 1)[0] if '/' in file else '/' %}
+
+  <h3>
+    Preview:
+    <span class="muted">{{ file }}</span>
+  </h3>
+
+  <hr>
+
+  {# ================= MEDIA PREVIEW ================= #}
+
+  {% if ext in ['mp4', 'webm'] %}
+    <video controls width="640"
+           src="/api_fetchfile/{{ file | urlencode }}"></video>
+
+  {% elif ext in ['mp3', 'wav', 'm4a'] %}
+    <audio controls
+           src="/api_fetchfile/{{ file | urlencode }}"></audio>
+
+  {% elif ext in ['png', 'jpg', 'jpeg', 'gif'] %}
+    <img src="/api_fetchfile/{{ file | urlencode }}"
+         style="max-width:400px; max-height:400px;">
+
+  {# ================= TEXT PREVIEW / EDIT ================= #}
+
+  {% else %}
+    {% set lines = file | file_read_lines %}
+
+    <form action="/modules/Files/savefile">
+      <input type="hidden" name="file" value="{{ file }}">
+
+      {% if lines and lines[0] == "File could not be read." %}
+        <p style="color:red; font-weight:600;">
+          File could not be read. Something is wrong.
+        </p>
+      {% else %}
+        <textarea name="content" style="width:100%; height:420px;">
+{% for line in lines -%}
+{{ line | e }}
+{% endfor -%}
+        </textarea>
+
+        <div style="margin-top:10px;">
+          <button class="btn" type="submit">Save</button>
+          <button class="btn" type="button"
+                  onclick="ChangeContentMain('Files','/filepreview?file={{ file | urlencode }}')">
+            Cancel
+          </button>
+        </div>
+      {% endif %}
+    </form>
+  {% endif %}
+
+  <hr>
+
+  {# ================= ACTION BUTTONS ================= #}
+
+  <a class="btn"
+     href="javascript:void(0)"
+     onclick="ChangeContentMain('Files','/index?file={{ parent_path | urlencode }}')">
+    Back
+  </a>
+
+  <a class="btn"
+     download
+     href="/api_fetchfile/{{ file | urlencode }}">
+    Download
+  </a>
+
+  <a class="btn btn-danger"
+     href="javascript:void(0)"
+     onclick="if (confirm('Delete file?')) {
+       ChangeContentMain('Files','/modules/Files/deleteapi?file={{ file | urlencode }}')
+     }">
+    Delete
+  </a>
+
+{% endif %}

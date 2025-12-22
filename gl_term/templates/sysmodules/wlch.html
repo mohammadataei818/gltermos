@@ -1,0 +1,4 @@
+
+{% for i in filelist %}
+<img onclick="window.location.href = '/apisettings/wlcmd?w={{ i }}'" src="/static/wallpapers/{{ i }}" width="200" height="100">
+{% endfor %}
