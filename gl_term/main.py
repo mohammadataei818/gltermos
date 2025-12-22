@@ -33,7 +33,7 @@ app.secret_key = "replace-with-your-real-secret"
 socketio = SocketIO(app, async_mode="threading")
 
 # ---------------- key/session (your existing key file) ----------------
-KEY_PATH = r"v:\glance\gl_term\key.file"
+KEY_PATH = r"./gl_term/key.file"
 if not os.path.exists(KEY_PATH):
     raise FileNotFoundError(f"Key file not found: {KEY_PATH}")
 
@@ -295,4 +295,5 @@ def on_term_close(msg):
 
 # ---------------- run ----------------
 if __name__ == "__main__":
+
     socketio.run(app, host="0.0.0.0", port=80, debug=True)
