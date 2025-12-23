@@ -1,2 +1,1 @@
-@echo off
-py ./gl_term/main.py
+flask --app ./gl_term/main.py  run --with-threads --debug

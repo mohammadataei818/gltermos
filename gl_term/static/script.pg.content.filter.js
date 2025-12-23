@@ -283,15 +283,7 @@ function LoadSettingsOption(settings, options = {}) {
   if (settings === 'main_list') {
     // Represent the settings main listing by 'main_list' so the titlebar treats it as a main app
     routeToSet = 'main_list';
-    html = `
-      <div class="settings-main">
-        <h2>Settings</h2>
-        <ul>
-          <li><a href="#" class="settings-link" data-setting="wlch">Wallpaper Changer</a></li>
-          <li><a href="#" class="settings-link" data-setting="About">About</a></li>
-        </ul>
-      </div>
-    `;
+    FetchData('/apisettings/lists')
   } else if (settings === 'About') {
     routeToSet = 'Settings/About';
     html = `
@@ -305,6 +297,13 @@ function LoadSettingsOption(settings, options = {}) {
     // fetch server-provided settings UI into the page
     SetHrefLink(routeToSet);
     FetchData('/apisettings/wlch');
+    updateTitlebarButtons();
+    return;
+  } else if (settings === 'Password') {
+    routeToSet = 'Settings/chpass';
+    // fetch server-provided settings UI into the page
+    SetHrefLink(routeToSet);
+    FetchData('/apisettings/chpass');
     updateTitlebarButtons();
     return;
   } else {

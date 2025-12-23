@@ -5,14 +5,13 @@
 <title>Control</title>
 <h2>Login To Server {{ hostname }}</h2>
 <form action="#" method="POST">
-    <input type="text" class="input-box i-w-100" value="{{ username }}" disabled><br><br><br>
-    <input type="password" class="input-box i-w-100" name="key" placeholder="Password"><br><br><br><br>
+    <input type="password" class="input-box i-w-100" name="key" placeholder="Password"><br><br>
     <a class="btn-a"><input type="submit" class="unset-all"></a><br>
 </form>
 
 
 <script>win_mode = "LoginScreen"</script>
 <script src="/static/script.pg.content.filter.js"></script>
-{% for flash in get_flashed_messages() %}
-<Script>showToast('{{ flash }}')</Script>
-{% endfor %}
+{% if error %}
+<Script>showToast('{{ error }}')</Script>
+{% endif %}

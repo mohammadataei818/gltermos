@@ -1,204 +1,232 @@
-# server.py (drop-in replacement)
+# main.py — fixed, hardened, single-file version (2025)
 import os
-import sys
 import uuid
-import datetime
+import threading
 import subprocess
 import select
-import threading
-from collections import deque
+from pathlib import Path
+from collections import defaultdict
+import logging
+import secrets
 
-from flask import Flask, render_template, request, redirect, session, send_file
+from flask import (
+    Flask, render_template, request,
+    redirect, session, send_file, abort
+)
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from werkzeug.utils import secure_filename
 
+# -------------------------------------------------
+# Platform
+# -------------------------------------------------
 IS_WINDOWS = os.name == "nt"
 
-# On Windows we use pywinpty (pip install pywinpty)
 if IS_WINDOWS:
-    try:
-        from winpty import PtyProcess
-    except Exception as ex:
-        raise ImportError("pywinpty (winpty) is required on Windows. Run: pip install pywinpty") from ex
+    # Note: winpty / PtyProcess is platform-dependent; keep branch as original
+    from winpty import PtyProcess
 else:
     import pty
 
-# ---------------- app config ----------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+# -------------------------------------------------
+# Paths
+# -------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent
+TEMPLATE_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
+KEY_PATH = BASE_DIR / "gl_term" / "key.file"
 
-app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
-app.secret_key = "replace-with-your-real-secret"
+if not KEY_PATH.is_file():
+    raise RuntimeError("Missing authentication key file")
 
-socketio = SocketIO(app, async_mode="threading")
+try:
+    _BASE_KEY = KEY_PATH.read_text().strip()
+except Exception as e:
+    raise RuntimeError(f"Failed to read key file: {e}")
 
-# ---------------- key/session (your existing key file) ----------------
-KEY_PATH = r"./gl_term/key.file"
-if not os.path.exists(KEY_PATH):
-    raise FileNotFoundError(f"Key file not found: {KEY_PATH}")
+# -------------------------------------------------
+# App
+# -------------------------------------------------
+app = Flask(
+    __name__,
+    template_folder=str(TEMPLATE_DIR),
+    static_folder=str(STATIC_DIR),
+)
 
-with open(KEY_PATH, "r", encoding="utf-8") as f:
-    base_key = f.read().strip()
+# Ensure secret_key is a string and cryptographically strong if not provided
+_env_secret = os.environ.get("FLASK_SECRET")
+if _env_secret:
+    app.secret_key = _env_secret
+else:
+    # fallback: URL-safe token string
+    app.secret_key = secrets.token_urlsafe(32)
 
-session_key_value = base_key * 3 + "ThisIsKeyRepeated3TimesAndMore" + base_key * 5
+# Security-related cookie defaults (can be toggled by setting env PRODUCTION=1)
+PRODUCTION = os.environ.get("PRODUCTION", "0") == "1"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = PRODUCTION  # set True in real production
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload limit
 
-# ---------------- helper safe render ----------------
-def safe_render(template_name, **kwargs):
-    full = os.path.join(TEMPLATE_DIR, template_name)
-    if not os.path.exists(full):
-        return f"Template not found: {template_name}", 404
-    return render_template(template_name, **kwargs)
+# Minimal logging configuration
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+)
+logger = logging.getLogger("gl_term_server")
 
-# ---------------- routes (kept minimal & compatible) ----------------
+# Allow configuring CORS origins for Socket.IO via env (default '*' same as before)
+_socket_cors = os.environ.get("SOCKETIO_CORS", "*")
+socketio = SocketIO(app, async_mode="threading", cors_allowed_origins=_socket_cors)
+
+# -------------------------------------------------
+# Authentication
+# -------------------------------------------------
+def base_key() -> str:
+    # use cached read value to avoid reading file repeatedly
+    return _BASE_KEY
+
+def is_authenticated() -> bool:
+    return session.get("auth") is True
+
+# Socket.IO auth binding
+socket_auth = set()
+socket_auth_lock = threading.Lock()
+
+# -------------------------------------------------
+# Routes
+# -------------------------------------------------
 @app.route("/", methods=["GET", "POST"])
 def home():
-    try:
-        if session.get("wallpaper") is None:
-            session["wallpaper"] = "1.jpg"
-        if request.method == "POST":
-            if request.form.get("key") == base_key:
-                session["pop_login"] = session_key_value
-                return redirect("/")
-            else:
-                return render_template("a/login.html", error="Incorrect key")
-        if session.get("pop_login") != session_key_value:
-            return render_template("a/login.html")
-        return render_template("a/apps.html")
-    except Exception:
-        import traceback
-        return f"<pre>{traceback.format_exc()}</pre>", 500
+    if request.method == "POST":
+        if request.form.get("key") == base_key():
+            session.clear()
+            session["auth"] = True
+            return redirect("/")
+        return render_template("a/login.html", error="Invalid key")
+
+    if not is_authenticated():
+        return render_template("a/login.html")
+
+    return render_template("a/apps.html")
 
 @app.route("/logout")
 def logout():
-    session.pop("pop_login", None)
+    session.clear()
     return redirect("/")
-
-@app.route("/settings/")
-def settings_appx():
-    if session.get("pop_login") != session_key_value:
-        return redirect("/")
-    return safe_render("a/settings.html")
-
-@app.route("/void_appx")
-def void_appx():
-    if session.get("pop_login") != session_key_value:
-        return redirect("/")
-    try:
-        os.system("taskkill /f /im pythonw.exe")
-        os.system("taskkill /f /im python.exe")
-    except Exception:
-        pass
-    return "<h2>Have A Great Day Ended.</h2>"
-
-@app.route("/apisettings/<apiname>")
-def api_settings(apiname):
-    if session.get("pop_login") != session_key_value:
-        return redirect("/")
-    if apiname == "wlch":
-        wallpapers_dir = os.path.join(STATIC_DIR, "wallpapers")
-        filelist = os.listdir(wallpapers_dir) if os.path.isdir(wallpapers_dir) else []
-        return safe_render("sysmodules/wlch.html")
-    if apiname == "wlcmd":
-        session["wallpaper"] = request.args.get("w", "")
-        return redirect("/settings")
-    return "Unknown API", 404
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    if session.get("pop_login") != session_key_value:
-        return redirect("/")
+    if not is_authenticated():
+        abort(403)
+
     file = request.files.get("file")
-    path = request.form.get("path", "")
-    if not os.path.isdir(path):
-        return f"Upload path not found: {path}", 400
-    file.save(os.path.join(path, file.filename))
+    if not file or not file.filename:
+        abort(400, "Missing file")
+
+    filename = secure_filename(file.filename)
+    if not filename:
+        abort(400, "Invalid filename")
+
+    rel = request.form.get("path", "")
+    # Resolve and validate target directory safely
+    try:
+        target_dir = (BASE_DIR / rel).resolve()
+        # Use relative_to for compatibility (raises ValueError if outside)
+        target_dir.relative_to(BASE_DIR)
+    except Exception:
+        abort(400, "Invalid path")
+
+    if not target_dir.is_dir():
+        abort(400, "Invalid path")
+
+    # Save file
+    try:
+        file.save(target_dir / filename)
+    except Exception as e:
+        logger.exception("Failed to save uploaded file")
+        abort(500, "Failed to save file")
     return redirect("/")
 
-@app.route("/favicon.ico")
-def favicon():
-    return send_file(os.path.join(BASE_DIR, "app_favicon.png"))
+@app.route("/api_fetchfile/<path:relpath>")
+def fetch_file(relpath):
+    if not is_authenticated():
+        abort(403)
 
-@app.route("/api_fetchfile/<path:path>")
-def fetchfile(path):
-    if session.get("pop_login") != session_key_value:
-        return redirect("/")
-    if not os.path.isfile(path):
-        return f"File not found: {path}", 404
-    return send_file(path)
+    try:
+        target = (BASE_DIR / relpath).resolve()
+        target.relative_to(BASE_DIR)
+    except Exception:
+        abort(404)
 
-@app.route("/modules/<aasd>/<ddda>")
-def modules_aasd_index(aasd, ddda):
-    safe_aasd = aasd.replace("..", "").replace("/", "")
-    safe_ddda = ddda.replace("..", "").replace("/", "")
-    template_path = f"modules/{safe_aasd}/{safe_ddda}.html"
-    full_template = os.path.join(TEMPLATE_DIR, template_path)
-    if not os.path.isfile(full_template):
-        return f"<h2>Module template not found: {template_path}</h2>", 404
-    return render_template(
-        template_path,
-        getoutput=lambda cmd: subprocess.check_output(cmd, shell=True, text=True),
-        os=os, open=open, sys=sys, subprocess=subprocess, bytes=bytes, str=str, len=len, datetime=datetime
-    )
+    if not target.is_file():
+        abort(404)
+
+    return send_file(target)
 
 @app.route("/terminal")
 def terminal_page():
-    if session.get("pop_login") != session_key_value:
+    if not is_authenticated():
         return redirect("/")
     return render_template("terminal.html")
 
-# ---------------- terminal management (multi-tab) ----------------
-# Each tab is represented by an entry in terminals[tab_id]
-# On Windows: terminals[tab]['proc'] is a winpty PtyProcess
-# On Unix: terminals[tab]['proc'] is subprocess and 'fd' is pty master fd
+# -------------------------------------------------
+# Terminal Management
+# -------------------------------------------------
 terminals = {}
+terminals_lock = threading.Lock()
+MAX_TERMINALS_PER_CLIENT = 2
 
-def create_terminal_for_owner(owner_sid):
-    """
-    Create a new terminal for the owner (socket sid).
-    Returns (tab_id, local_echo_flag)
-    """
-    tab = str(uuid.uuid4())
+def create_terminal(owner_sid: str):
+    with terminals_lock:
+        count = sum(1 for t in terminals.values() if t["owner"] == owner_sid)
+        if count >= MAX_TERMINALS_PER_CLIENT:
+            raise RuntimeError("Terminal limit reached")
+
+    tab = uuid.uuid4().hex
 
     if IS_WINDOWS:
-        # Use pywinpty high-level API: PtyProcess.spawn
-        # This gives a real console (ConPTY/winpty) and proper interactive behavior.
-        proc = PtyProcess.spawn("cmd.exe")  # spawns cmd.exe
-        terminals[tab] = {"proc": proc, "owner": owner_sid, "is_windows": True, "pending_echo": deque()}
+        proc = PtyProcess.spawn("cmd.exe")
 
         def reader():
             try:
-                # read in chunks until the process exits
                 while proc.isalive():
-                    # proc.read may block; read small chunks with a short timeout approach
-                    try:
-                        data = proc.read(4096)
-                    except Exception:
-                        # some pywinpty versions may raise on short reads; try readline fallback
+                    data = proc.read(4096)
+                    if data:
+                        # ensure we emit a string (avoid JSON/bytes issue)
                         try:
-                            data = proc.readline()
+                            text = data.decode(errors="ignore") if isinstance(data, (bytes, bytearray)) else str(data)
                         except Exception:
-                            data = ''
-                    if not data:
-                        break
-                    # proc.read returns unicode (str), emit directly
-                    socketio.emit("term_output", {"tab": tab, "output": data}, room=owner_sid)
-            except Exception:
-                socketio.emit("term_output", {"tab": tab, "output": "\r\n[winpty read error]\r\n"}, room=owner_sid)
+                            text = str(data)
+                        socketio.emit(
+                            "term_output",
+                            {"tab": tab, "output": text},
+                            room=owner_sid,
+                        )
             finally:
-                socketio.emit("term_output", {"tab": tab, "output": "\r\n[terminal exited]\r\n"}, room=owner_sid)
+                try:
+                    proc.close()
+                except Exception:
+                    pass
+
+        with terminals_lock:
+            terminals[tab] = {"proc": proc, "owner": owner_sid}
 
         threading.Thread(target=reader, daemon=True).start()
-        # With PtyProcess/ConPTY there is proper terminal echo, so client should NOT do local echo
-        return tab, False
+        return tab
 
-    # Unix-like: PTY approach
     master, slave = pty.openpty()
     shell = os.environ.get("SHELL", "/bin/bash")
-    proc = subprocess.Popen([shell], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
-    os.close(slave)
-    terminals[tab] = {"proc": proc, "fd": master, "owner": owner_sid, "is_windows": False}
 
-    def read_pty():
+    proc = subprocess.Popen(
+        [shell],
+        stdin=slave,
+        stdout=slave,
+        stderr=slave,
+        close_fds=True,
+    )
+    os.close(slave)
+
+    def reader():
         try:
             while True:
                 r, _, _ = select.select([master], [], [], 0.1)
@@ -206,94 +234,114 @@ def create_terminal_for_owner(owner_sid):
                     data = os.read(master, 4096)
                     if not data:
                         break
-                    socketio.emit("term_output", {"tab": tab, "output": data.decode(errors="ignore")}, room=owner_sid)
-        except Exception:
-            socketio.emit("term_output", {"tab": tab, "output": "\n[pty read error]\n"}, room=owner_sid)
+                    # always send string to avoid JSON/bytes issues
+                    socketio.emit(
+                        "term_output",
+                        {"tab": tab, "output": data.decode(errors="ignore")},
+                        room=owner_sid,
+                    )
         finally:
-            socketio.emit("term_output", {"tab": tab, "output": "\n[pty exited]\n"}, room=owner_sid)
+            try:
+                proc.wait()
+            except Exception:
+                pass
+            try:
+                os.close(master)
+            except Exception:
+                pass
 
-    threading.Thread(target=read_pty, daemon=True).start()
-    # PTY provides echo, client should NOT do local echo
-    return tab, False
+    with terminals_lock:
+        terminals[tab] = {"proc": proc, "fd": master, "owner": owner_sid}
 
-def close_terminal(tab):
-    info = terminals.pop(tab, None)
+    threading.Thread(target=reader, daemon=True).start()
+    return tab
+
+def close_terminal(tab: str):
+    with terminals_lock:
+        info = terminals.pop(tab, None)
+
     if not info:
         return
-    try:
-        if info.get("is_windows"):
-            proc = info.get("proc")
-            try:
-                proc.terminate()
-            except Exception:
-                try:
-                    proc.close()
-                except Exception:
-                    pass
-        else:
-            p = info.get("proc")
-            if p:
-                p.terminate()
-    except Exception:
-        pass
 
-# ---------------- Socket.IO handlers ----------------
+    try:
+        info["proc"].terminate()
+    except Exception:
+        try:
+            info["proc"].kill()
+        except Exception:
+            pass
+
+# -------------------------------------------------
+# Socket.IO
+# -------------------------------------------------
 @socketio.on("connect")
 def on_connect():
-    sid = request.sid
-    join_room(sid)
+    if not is_authenticated():
+        return False
+
+    with socket_auth_lock:
+        socket_auth.add(request.sid)
+
+    join_room(request.sid)
 
 @socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
-    # close any terminals owned by this sid
-    to_close = [t for t, info in list(terminals.items()) if info.get("owner") == sid]
-    for t in to_close:
-        close_terminal(t)
-    try:
-        leave_room(sid)
-    except Exception:
-        pass
+
+    with socket_auth_lock:
+        socket_auth.discard(sid)
+
+    with terminals_lock:
+        owned = [t for t, i in terminals.items() if i["owner"] == sid]
+
+    for tab in owned:
+        close_terminal(tab)
+
+    leave_room(sid)
 
 @socketio.on("term_new")
 def on_term_new():
-    if session.get("pop_login") != session_key_value:
-        return False
-    sid = request.sid
-    tab_id, local_echo = create_terminal_for_owner(sid)
-    emit("term_created", {"tab": tab_id, "local_echo": local_echo})
+    if request.sid not in socket_auth:
+        return
+
+    try:
+        tab = create_terminal(request.sid)
+        emit("term_created", {"tab": tab})
+    except RuntimeError as e:
+        emit("error", {"message": str(e)})
 
 @socketio.on("term_input")
 def on_term_input(msg):
-    if session.get("pop_login") != session_key_value:
-        return False
-    sid = request.sid
     tab = msg.get("tab")
     data = msg.get("data", "")
-    if not tab or tab not in terminals:
+
+    with terminals_lock:
+        info = terminals.get(tab)
+
+    if not info or info["owner"] != request.sid:
         return
-    info = terminals[tab]
-    if info.get("owner") != sid:
-        return
+
     try:
-        if info.get("is_windows"):
-            # proc.write accepts strings
+        if IS_WINDOWS:
+            # PtyProcess.write expects str input; ensure type safety
+            if isinstance(data, (bytes, bytearray)):
+                data = data.decode(errors="ignore")
             info["proc"].write(data)
         else:
-            os.write(info["fd"], data.encode(errors="ignore"))
+            os.write(info["fd"], data.encode())
     except Exception:
-        pass
+        logger.exception("Failed to write to terminal")
 
 @socketio.on("term_close")
 def on_term_close(msg):
-    if session.get("pop_login") != session_key_value:
-        return False
     tab = msg.get("tab")
     if tab:
         close_terminal(tab)
         emit("term_closed", {"tab": tab})
 
-# ---------------- run ----------------
+# -------------------------------------------------
+# Run
+# -------------------------------------------------
 if __name__ == "__main__":
-
-    socketio.run(app, host="0.0.0.0", port=80, debug=True)
+    logger.info("Starting server")
+    socketio.run(app, host="0.0.0.0", port=8080, debug=False)

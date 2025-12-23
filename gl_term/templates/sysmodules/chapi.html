@@ -1,0 +1,17 @@
+{% set corrctprevpass = open('./gl_term/key.file').read() %}
+{% set prevpass = request.args.get('prevpass') %}
+{% set newpass = request.args.get('newpass') %}
+{% set newpassagain = request.args.get('newpassagain') %}
+{% if prevpass == corrctprevpass %}
+{% if newpassagain == newpass %}
+{{ open('./gl_term/key.file','w').write(newpass) }}
+{{ session.pop("pop_login", None) }}
+{% else %}
+{{ flash('Error. The "New Password Again" in not equeal to "New Password"') }}
+{% endif %}
+{% else %}
+{{ flash('Error. The "Previous Password" in not equeal to The Corrct Password') }}
+{% endif %}
+<script>
+window.location.href = '/logout'
+</script>

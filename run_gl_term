@@ -1,1 +1,0 @@
-flask --app ./gl_term/main.py  run --with-threads

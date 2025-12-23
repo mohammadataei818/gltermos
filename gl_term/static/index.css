@@ -88,9 +88,11 @@ button.btn-a:hover {
 .input-box {
   border: 1px solid var(--accent);
   padding: 0.6rem;
+  margin: 0.1rem;
   border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
+  background: #373737;
 }
 
 /* -------------------------
