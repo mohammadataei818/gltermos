@@ -21,7 +21,6 @@ function renderBaseLayout() {
       <a href="/" data-nav="/">Home</a>
       <a href="/settings" data-nav="/settings">Settings</a>
       <a href="javascript:void(0)" onclick="ChangeContentMain('sys1$terminal')">Shell</a>
-      <a href="/void_appx" data-nav="/void_appx">Kill Server</a>
       <a href="/logout" data-nav="/logout">Logout</a>
       <div class="control-dock"></div>
     </div>
