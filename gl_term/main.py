@@ -96,7 +96,7 @@ app.jinja_env.globals["getoutput"] = subprocess.getoutput
 app.jinja_env.globals["refbas"] = lambda: (load_base_key_bytes() or b"").decode("utf-8", "ignore")
 
 # session
-app.secret_key = os.environ.get("FLASK_SECRET") or secrets.token_urlsafe(32)
+app.secret_key = "DONTTRYTOAUTHIFYOUWANTTONOTHACKUSANDACUALLYUSETHEPROGRAMISINTENDEDFORREMOTINGANDMANAGEINGTHECOMPUTERIMEANTSERVERANDCONTROLSOMEMAGIC1144236038043984983984938498394938498394393949394397498348834837848348738438478374837873847"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("PRODUCTION") == "1"
