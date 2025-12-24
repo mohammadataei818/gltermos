@@ -6,6 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css"/>
   <style>
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/static/JetBrainsMono-Regular.woff2") format("woff2");
+}
     :root{
       --bg:#1e1e1e;
       --top:#0f1720;
@@ -14,7 +21,7 @@
       --button:#0a7;
       --danger:#ff5d5d;
     }
-    html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
+    html,body{height:100%;margin:0;background:var(--bg);font-family:"JetBrains Mono",monospace}
     /* Top bar / tabs */
     #topbar{
       box-sizing:border-box;
