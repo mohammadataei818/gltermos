@@ -76,7 +76,7 @@ button.btn-a:hover {
 .i-w-100 {
   width: 100%;
 }
-
+html{background: url('/static/wallpapers/1.png') no-repeat fixed center;background-size: cover;}
 .unset-all {
   all: unset;
 }

@@ -1,7 +1,6 @@
 
 <h2>Appx Manager<div class="fl-r"><a href="#" onclick="ChangeContentMain('Manager','/create')">Create</a> <a href="#" onclick="ChangeContentMain('Manager','/delete')">Delete</a></div></h2>
 {% set result0 = os.listdir('./gl_term/templates/modules/Manager/Confs/') %}
-{{ print(result0) }}
 {% for a in result0 %}
 {% set result1 = open('./gl_term/templates/modules/Manager/Confs/' + a).read() %}
 {% set asd = result1.split('\n') %}
