@@ -222,65 +222,68 @@ from urllib.parse import unquote
 @app.route("/apisettings/<name>", methods=["GET"])
 def api_settings(name):
     logger.debug("REQUEST /apisettings path=%s args=%s", request.path, dict(request.args))
+    
     if not is_authenticated():
         logger.debug("Unauthenticated access to /apisettings -> 403")
         abort(403)
 
     name = unquote((name or "lists").strip())
-
     sys_dir = TEMPLATE_DIR / "sysmodules"
+
     if not sys_dir.is_dir():
         logger.error("templates/sysmodules directory not found at %s", sys_dir)
         abort(404)
 
-    # --- legacy chapi handling (GET-based) ---
+    # Handle legacy chapi password change
     if name.lower() == "chapi":
-        prevpass = request.args.get("prevpass", "")
-        newpass = request.args.get("newpass", "")
-        newpassagain = request.args.get("newpassagain", "")
+        return handle_chapi_password_change(request, sys_dir)
 
-        # no params -> just render the template if exists
-        if not (prevpass and newpass and newpassagain):
-            # try to locate the template case-insensitively
-            for f in sys_dir.iterdir():
-                if f.is_file() and f.name.lower() == "chapi.html":
-                    logger.debug("Rendering chapi template file=%s", f.name)
-                    return render_template(f"sysmodules/{f.name}")
-            logger.info("chapi template not found under %s", sys_dir)
-            abort(404)
+    # Render normal sysmodules pages
+    return render_sysmodule_template(name, sys_dir)
 
-        # validate current key
-        current_b = load_base_key_bytes()
-        if not current_b or not secrets.compare_digest(prevpass.encode("utf-8"), current_b):
-            flash('Error. The "Previous Password" is incorrect')
-            return redirect("/apisettings/chapi")  # keep legacy redirect behaviour for errors
+def handle_chapi_password_change(request, sys_dir):
+    prevpass = request.args.get("prevpass", "")
+    newpass = request.args.get("newpass", "")
+    newpassagain = request.args.get("newpassagain", "")
 
-        if newpass != newpassagain:
-            flash('Error. The "New Password Again" is not equal to "New Password"')
-            return redirect("/apisettings/chapi")
+    if not (prevpass and newpass and newpassagain):
+        return render_template_if_exists("chapi.html", sys_dir)
 
-        try:
-            write_key_atomic_bytes(newpass.encode("utf-8"))
-        except Exception:
-            logger.exception("Failed to write new key")
-            flash("Internal error: unable to write key file")
-            return redirect("/apisettings/chapi")
+    current_b = load_base_key_bytes()
+    if not current_b or not secrets.compare_digest(prevpass.encode("utf-8"), current_b):
+        flash('Error: The "Previous Password" is incorrect.')
+        return redirect("/apisettings/chapi")
 
-        session.clear()
-        return redirect("/logout")
+    if newpass != newpassagain:
+        flash('Error: The "New Password Again" does not match the "New Password".')
+        return redirect("/apisettings/chapi")
 
-    # --- normal sysmodules pages: do case-insensitive lookup ---
+    try:
+        write_key_atomic_bytes(newpass.encode("utf-8"))
+    except Exception as e:
+        logger.exception("Failed to write new key: %s", e)
+        flash("Internal error: unable to write key file.")
+        return redirect("/apisettings/chapi")
+
+    session.clear()
+    return redirect("/logout")
+
+def render_sysmodule_template(name, sys_dir):
     target = f"{name}.html".lower()
     for f in sys_dir.iterdir():
         if f.is_file() and f.name.lower() == target:
             logger.debug("Found sysmodules template match: %s -> %s", name, f.name)
             return render_template(f"sysmodules/{f.name}")
 
-    # Optional: fallback to lists instead of 404
-    # logger.info("sysmodules: template not found for %s; falling back to lists", name)
-    # return render_template("sysmodules/lists.html")
+    logger.info("Template not found for %s; returning 404.", name)
+    abort(404)
 
-    logger.info("sysmodules: template not found for %s; returning 404. Checked %s", name, [p.name for p in sys_dir.iterdir() if p.is_file()])
+def render_template_if_exists(template_name, sys_dir):
+    for f in sys_dir.iterdir():
+        if f.is_file() and f.name.lower() == template_name.lower():
+            logger.debug("Rendering template file=%s", f.name)
+            return render_template(f"sysmodules/{f.name}")
+    logger.info("Template %s not found under %s", template_name, sys_dir)
     abort(404)
 
 # -------------------------------------------------
