@@ -189,45 +189,126 @@ def logout():
 # -------------------------------------------------
 # /modules dispatcher (specific-first)
 # -------------------------------------------------
+# replace the existing modules(...) route handler with this implementation
+
+from urllib.parse import unquote
+import re
+
+def _normalize_name(s: str) -> str:
+    # lower + remove non-alphanumeric to compare names robustly
+    return re.sub(r'[^0-9a-z]', '', (s or '').lower())
+
 @app.route("/modules", defaults={"path": ""})
 @app.route("/modules/<path:path>")
 def modules(path):
     if not is_authenticated():
         abort(403)
 
-    path = (path or "").strip("/")
-    candidates = []
+    # decode any percent-encoding and strip slashes
+    raw = unquote(path or "").strip("/")
 
-    if path:
-        parts = path.split("/")
+    templates_root = TEMPLATE_DIR  # APP_DIR / "templates"
+    modules_root = templates_root / "modules"
+
+    def tpl_exists(tpl: str) -> bool:
+        # check file existence in templates directory
+        p = templates_root / tpl
+        return p.is_file()
+
+    # build primary candidate list (specific-first)
+    candidates = []
+    if raw:
+        candidates.append(f"modules/{raw}.html")
+        parts = raw.split("/")
         candidates.append(f"modules/{parts[0]}/index.html")
         if len(parts) > 1:
             candidates.append(f"modules/{parts[0]}/{parts[1]}.html")
             tail = "/".join(parts[1:])
             candidates.append(f"modules/{parts[0]}/{tail}.html")
-        candidates.append(f"modules/{path}.html")
 
-    candidates.extend(["modules/Files/index.html", "modules/index.html"])
-    seen = set()
-    candidates = [c for c in candidates if not (c in seen or seen.add(c))]
+    # fallbacks
+    candidates.extend([
+        "modules/Files/index.html",
+        "modules/index.html",
+    ])
 
+    # 1) try exact candidates first
+    tried = []
     for tpl in candidates:
-        try:
+        tried.append(tpl)
+        if tpl_exists(tpl):
+            logger.debug("modules: exact match template=%s for path=%s", tpl, raw)
             return render_template(tpl)
-        except TemplateNotFound:
+
+    # 2) case-insensitive / normalized directory matching
+    # list actual module directories under templates/modules
+    actual_dirs = []
+    if modules_root.is_dir():
+        for entry in modules_root.iterdir():
+            if entry.is_dir():
+                actual_dirs.append(entry.name)
+
+    # try to map candidate module segment to actual dir name
+    for tpl in candidates:
+        # only try mapping if tpl starts with 'modules/'
+        if not tpl.startswith("modules/"):
             continue
+        parts = tpl.split("/", 2)  # ['modules', '<seg>', 'rest...']
+        if len(parts) < 2:
+            continue
+        seg = parts[1]
+        rest = parts[2] if len(parts) > 2 else ""
+        for real in actual_dirs:
+            if _normalize_name(real) == _normalize_name(seg):
+                mapped_tpl = f"modules/{real}"
+                if rest:
+                    mapped_tpl = f"{mapped_tpl}/{rest}"
+                # normalize slashes
+                mapped_tpl = mapped_tpl.strip("/")
+                tried.append(mapped_tpl)
+                if tpl_exists(mapped_tpl):
+                    logger.debug("modules: normalized-match template=%s for path=%s (seg %s -> %s)", mapped_tpl, raw, seg, real)
+                    return render_template(mapped_tpl)
+
+    # 3) deep search: try to find any html under templates/modules whose normalized relative path matches the requested normalized name
+    norm_target = _normalize_name(raw)
+    if norm_target:
+        for f in modules_root.rglob("*.html"):
+            rel = f.relative_to(templates_root).as_posix()  # e.g. "modules/Manager/index.html"
+            # create normalized forms to compare
+            # use both full rel (without .html) and the stem (filename) + parent
+            rel_no_ext = rel[:-5] if rel.lower().endswith(".html") else rel
+            if _normalize_name(rel_no_ext) == norm_target or _normalize_name(Path(rel_no_ext).name) == norm_target:
+                tried.append(rel)
+                logger.debug("modules: deep-match template=%s for path=%s", rel, raw)
+                return render_template(rel)
+
+    # nothing matched: log attempted templates for debugging
+    logger.info("modules: template not found for path=%r; tried=%s", raw, tried)
     abort(404)
+
 
 # -------------------------------------------------
 # /apisettings dispatcher (legacy chapi via GET)
 # -------------------------------------------------
+from urllib.parse import unquote
+
 @app.route("/apisettings", defaults={"name": "lists"}, methods=["GET"])
 @app.route("/apisettings/<name>", methods=["GET"])
 def api_settings(name):
     if not is_authenticated():
         abort(403)
 
-    if name == "chapi":
+    name = unquote(name or "").strip()
+
+    sysmodules_dir = TEMPLATE_DIR / "sysmodules"
+    if not sysmodules_dir.is_dir():
+        abort(404)
+
+    # -------------------------------------------------
+    # LEGACY PASSWORD CHANGE (chapi via GET)
+    # -------------------------------------------------
+    if name.lower() == "chapi":
         prevpass = request.args.get("prevpass", "")
         newpass = request.args.get("newpass", "")
         newpassagain = request.args.get("newpassagain", "")
@@ -235,12 +316,8 @@ def api_settings(name):
         if not prevpass or not newpass or not newpassagain:
             return render_template("sysmodules/chapi.html")
 
-        current_b = load_base_key_bytes()
-        if not current_b:
-            flash("Internal error: key not configured")
-            return redirect("/apisettings/chapi")
-
-        if not secrets.compare_digest(prevpass.encode("utf-8"), current_b):
+        current = load_base_key_bytes()
+        if not current or not secrets.compare_digest(prevpass.encode("utf-8"), current):
             flash('Error. The "Previous Password" is incorrect')
             return redirect("/apisettings/chapi")
 
@@ -251,19 +328,23 @@ def api_settings(name):
         try:
             write_key_atomic_bytes(newpass.encode("utf-8"))
         except Exception:
-            logger.exception("Failed to write new key")
             flash("Internal error: unable to write key file")
             return redirect("/apisettings/chapi")
 
-        # logout after change
         session.clear()
         return redirect("/logout")
 
-    # default sysmodules render
-    try:
-        return render_template(f"sysmodules/{name}.html")
-    except TemplateNotFound:
-        abort(404)
+    # -------------------------------------------------
+    # CASE-INSENSITIVE template lookup (Linux safe)
+    # -------------------------------------------------
+    target = f"{name}.html".lower()
+
+    for f in sysmodules_dir.iterdir():
+        if f.is_file() and f.name.lower() == target:
+            tpl = f"sysmodules/{f.name}"
+            return render_template(tpl)
+
+    abort(404)
 
 # -------------------------------------------------
 # File upload / fetch
