@@ -215,30 +215,73 @@ def modules(path):
 # -------------------------------------------------
 # /apisettings (sysmodules, FINAL)
 # -------------------------------------------------
+# DROP-IN replacement for api_settings route
+from urllib.parse import unquote
+
 @app.route("/apisettings", defaults={"name": "lists"}, methods=["GET"])
 @app.route("/apisettings/<name>", methods=["GET"])
 def api_settings(name):
+    logger.debug("REQUEST /apisettings path=%s args=%s", request.path, dict(request.args))
     if not is_authenticated():
+        logger.debug("Unauthenticated access to /apisettings -> 403")
         abort(403)
 
-    name = (name or "").strip()
-    sysmodules_dir = TEMPLATE_DIR / "sysmodules"
-    if not sysmodules_dir.is_dir():
+    name = unquote((name or "lists").strip())
+
+    sys_dir = TEMPLATE_DIR / "sysmodules"
+    if not sys_dir.is_dir():
+        logger.error("templates/sysmodules directory not found at %s", sys_dir)
         abort(404)
 
-    # legacy password change
+    # --- legacy chapi handling (GET-based) ---
     if name.lower() == "chapi":
-        # password-change logic...
-        pass  # (same as before)
+        prevpass = request.args.get("prevpass", "")
+        newpass = request.args.get("newpass", "")
+        newpassagain = request.args.get("newpassagain", "")
 
-    # Case-insensitive search for template file
-    target_file = f"{name}.html".lower()
-    for f in sysmodules_dir.iterdir():
-        if f.is_file() and f.name.lower() == target_file:
+        # no params -> just render the template if exists
+        if not (prevpass and newpass and newpassagain):
+            # try to locate the template case-insensitively
+            for f in sys_dir.iterdir():
+                if f.is_file() and f.name.lower() == "chapi.html":
+                    logger.debug("Rendering chapi template file=%s", f.name)
+                    return render_template(f"sysmodules/{f.name}")
+            logger.info("chapi template not found under %s", sys_dir)
+            abort(404)
+
+        # validate current key
+        current_b = load_base_key_bytes()
+        if not current_b or not secrets.compare_digest(prevpass.encode("utf-8"), current_b):
+            flash('Error. The "Previous Password" is incorrect')
+            return redirect("/apisettings/chapi")  # keep legacy redirect behaviour for errors
+
+        if newpass != newpassagain:
+            flash('Error. The "New Password Again" is not equal to "New Password"')
+            return redirect("/apisettings/chapi")
+
+        try:
+            write_key_atomic_bytes(newpass.encode("utf-8"))
+        except Exception:
+            logger.exception("Failed to write new key")
+            flash("Internal error: unable to write key file")
+            return redirect("/apisettings/chapi")
+
+        session.clear()
+        return redirect("/logout")
+
+    # --- normal sysmodules pages: do case-insensitive lookup ---
+    target = f"{name}.html".lower()
+    for f in sys_dir.iterdir():
+        if f.is_file() and f.name.lower() == target:
+            logger.debug("Found sysmodules template match: %s -> %s", name, f.name)
             return render_template(f"sysmodules/{f.name}")
 
-    abort(404)
+    # Optional: fallback to lists instead of 404
+    # logger.info("sysmodules: template not found for %s; falling back to lists", name)
+    # return render_template("sysmodules/lists.html")
 
+    logger.info("sysmodules: template not found for %s; returning 404. Checked %s", name, [p.name for p in sys_dir.iterdir() if p.is_file()])
+    abort(404)
 
 # -------------------------------------------------
 # Terminal (unchanged)
