@@ -1,367 +1,172 @@
+<!-- gl_term/templates/terminal.html -->
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>Web Terminal (multi-tab)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css"/>
-  <style>
-@font-face {
-  font-family: "JetBrains Mono";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("/static/JetBrainsMono-Regular.woff2") format("woff2");
+<meta charset="utf-8">
+<title>gl_term — Terminal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+<style>
+  @font-face {
+    font-display: block;
+    font-family: JetBrainsMono;
+    font-style: normal;
+    font-weight: 400;
+    src: url(/static/JetBrainsMono-Regular.woff2) format("woff2")
 }
-    :root{
-      --bg:#1e1e1e;
-      --top:#0f1720;
-      --muted:#9aa4ad;
-      --accent:#0b84ff;
-      --button:#0a7;
-      --danger:#ff5d5d;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);font-family:"JetBrains Mono",monospace !important;border-radius: 3px;}
-    /* Top bar / tabs */
-    #topbar{
-      box-sizing:border-box;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:6px;
-      background:var(--top);
-      color:var(--muted);
-      flex-wrap:wrap;
-      row-gap:6px;
-    }
-    #tabs{
-      display:flex;
-      gap:6px;
-      align-items:center;
-      overflow:auto;
-      padding:4px;
-      flex:1 1 auto;
-      min-width:0;
-    }
-    .tabbtn{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      padding:6px 8px;
-      border-radius:8px;
-      background:#222;
-      color:var(--muted);
-      cursor:pointer;
-      white-space:nowrap;
-      font-size:13px;
-    }
-    .tabbtn.active{background:var(--accent); color:#fff;}
-    .tab-label{max-width:120px; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle}
-    .closebtn{
-      background:transparent;border:0;color:#ccc;cursor:pointer;font-weight:600;padding:0 6px;border-radius:4px;
-    }
-    #newtab{
-      flex:0 0 auto;
-      padding:8px 12px;
-      border-radius:8px;
-      background:var(--button);
-      color:#012;
-      border:none;
-      cursor:pointer;
-      font-weight:600;
-    }
-
-    /* Terminal area */
-    #termwrap{
-      height:calc(100vh - 64px);
-      position:relative;
-      background:var(--bg);
-    }
-    .term-instance{position:absolute; inset:0; display:none}
-    .term-instance.active{display:block}
-
-    /* Toast confirm */
-    #confirmToast{
-      position:fixed;
-      left:50%;
-      transform:translateX(-50%) translateY(120%);
-      bottom:18px;
-      min-width:260px;
-      max-width:90%;
-      background:rgba(20,20,20,0.98);
-      color:#eee;
-      border-radius:10px;
-      box-shadow:0 10px 30px rgba(0,0,0,0.6);
-      padding:12px;
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-      z-index:2147483647;
-      transition:transform .22s cubic-bezier(.2,.9,.3,1),opacity .22s;
-      opacity:0;
-      pointer-events:none;
-    }
-    #confirmToast.show{ transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
-    #confirmToast .msg{flex:1;padding-right:8px;font-size:14px;color:var(--muted)}
-    #confirmToast .actions{display:flex;gap:8px}
-    .toast-btn{
-      padding:6px 10px;border-radius:8px;border:0;cursor:pointer;font-weight:600
-    }
-    .toast-btn.ok{ background:var(--accent); color:#fff}
-    .toast-btn.cancel{ background:#222; color:#ddd }
-
-    /* Responsive tweaks */
-    @media (max-width:720px){
-      #topbar{padding:6px 8px; row-gap:8px}
-      #newtab{padding:6px 8px; font-size:13px}
-      .tab-label{max-width:80px}
-      #termwrap{height:calc(100vh - 96px)}
-    }
-  </style>
+:root{--bg:#121212;--panel:#181818;--panel2:#0f172a;--accent:#4c8dff;--text:#ffffff;--muted:#6b7280}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family: JetBrainsMono!important}
+#topbar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);border-bottom:1px solid #1f2937}
+#brand{font-weight:600;margin-right:8px}
+#tabs{display:flex;gap:6px;flex:1;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--panel2);border-radius:6px;cursor:pointer;font-size:13px;user-select:none}
+.tab.active{background:var(--accent);color:#fff}
+.tab .close{color:var(--muted);font-weight:bold;cursor:pointer;margin-left:6px}
+#btn-new{background:#1f2937;border:1px solid #374151;color:var(--text);border-radius:6px;padding:6px 10px;cursor:pointer}
+#terminal,#empty{flex:1;display:none}
+#empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--panel);padding:16px;border-radius:8px;width:320px}
+.modal h3{margin:0 0 10px 0;font-size:16px}
+.modal input{width:100%;padding:6px;margin-bottom:12px;background:#020617;color:var(--text);border:1px solid #374151;border-radius:6px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px}
+.modal-actions button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
+.btn-cancel{background:#374151;color:var(--text)}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-primary{background:var(--accent);color:#fff}
+</style>
 </head>
 <body>
-  <div id="topbar" role="toolbar" aria-label="Terminal toolbar">
-    <div id="tabs" role="tablist" aria-label="Terminal tabs"><button id="newtab" title="New Tab">+</button></div>
-  </div>
+<div id="topbar"><button id="btn-new">＋</button><div id="tabs"></div></div>
+<div id="terminal"></div>
+<div id="empty">No terminals open — click ＋ to create one</div>
 
-  <div id="termwrap" aria-live="polite"></div>
+<div class="modal-backdrop" id="rename-modal"><div class="modal"><h3>Rename Tab</h3><input id="rename-input"><div class="modal-actions"><button class="btn-cancel" onclick="closeRename()">Cancel</button><button class="btn-primary" onclick="applyRename()">Rename</button></div></div></div>
 
-  <!-- Toast confirmation (hidden by default) -->
-  <div id="confirmToast" role="dialog" aria-hidden="true" aria-live="assertive">
-    <div class="msg" id="toastMsg">Close this terminal tab?</div>
-    <div class="actions">
-      <button class="toast-btn cancel" id="toastCancel">Cancel</button>
-      <button class="toast-btn ok" id="toastOK">Close</button>
-    </div>
-  </div>
+<div class="modal-backdrop" id="close-modal"><div class="modal"><h3>Close this tab?</h3><p>This will terminate the running shell.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClose()">Cancel</button><button class="btn-danger" onclick="applyClose()">Close</button></div></div></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/socket.io/client-dist/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
 
-  <script>
-  (function(){
-    const socket = io();
-    const tabsEl = document.getElementById('tabs');
-    const newTabBtn = document.getElementById('newtab');
-    const termwrap = document.getElementById('termwrap');
+<script>
+const term = new Terminal({cursorBlink:true,scrollback:10000,convertEol:true});
+const fit = new FitAddon.FitAddon();
+term.loadAddon(fit);
 
-    // Toast elements
-    const toast = document.getElementById('confirmToast');
-    const toastMsg = document.getElementById('toastMsg');
-    const toastOK = document.getElementById('toastOK');
-    const toastCancel = document.getElementById('toastCancel');
+const termEl = document.getElementById('terminal');
+const emptyEl = document.getElementById('empty');
+const tabsEl = document.getElementById('tabs');
+const btnNew = document.getElementById('btn-new');
 
-    // terminals map: tabId -> { term, container, button, closeBtn, local_echo, lineBuf }
-    const terminals = {};
-    // pending confirmation (tab id) shown in toast
-    let pendingCloseTab = null;
+const renameModal = document.getElementById('rename-modal');
+const closeModal = document.getElementById('close-modal');
+let pendingTab = null;
 
-    function switchToTab(tab) {
-      for (const t in terminals) {
-        const info = terminals[t];
-        if (t === tab) {
-          info.container.classList.add('active');
-          info.button.classList.add('active');
-          try { info.term.focus(); } catch(e){}
-        } else {
-          info.container.classList.remove('active');
-          info.button.classList.remove('active');
-        }
-      }
+let buffers = {}; // tab -> string
+let titles = {};  // tab -> display title
+let activeTab = null;
+let tabCount = 1;
+
+function updateView(){
+  if(!activeTab){ termEl.style.display='none'; emptyEl.style.display='flex'; }
+  else { termEl.style.display='block'; emptyEl.style.display='none'; fit.fit(); term.focus(); }
+}
+
+function renderTabs(){
+  tabsEl.innerHTML='';
+  Object.keys(buffers).forEach(tab=>{
+    const el=document.createElement('div');
+    el.className='tab'+(tab===activeTab?' active':'');
+    el.textContent=titles[tab]||tab.slice(0,6);
+    el.ondblclick=()=>openRename(tab);
+    const close=document.createElement('span'); close.textContent='×'; close.className='close';
+    close.onclick=e=>{ e.stopPropagation(); openClose(tab); };
+    el.appendChild(close);
+    el.onclick=()=>switchTab(tab);
+    tabsEl.appendChild(el);
+  });
+}
+
+function switchTab(tab){
+  activeTab = tab;
+  term.clear();
+  term.write(buffers[tab] || '');
+  renderTabs();
+  updateView();
+}
+
+function openRename(tab){ pendingTab=tab; document.getElementById('rename-input').value = titles[tab] || ''; renameModal.style.display='flex'; }
+function closeRename(){ renameModal.style.display='none'; pendingTab=null; }
+function applyRename(){ const v = document.getElementById('rename-input').value.trim(); if(v) titles[pendingTab]=v; closeRename(); renderTabs(); }
+
+function openClose(tab){ pendingTab=tab; closeModal.style.display='flex'; }
+function closeClose(){ closeModal.style.display='none'; pendingTab=null; }
+function applyClose(){ socket.emit('term_close',{tab: pendingTab}); closeClose(); }
+
+const socket = io(location.protocol + '//' + location.host, { path:'/socket.io', transports:['websocket','polling'], reconnection:true });
+
+socket.on('connect', ()=>{ if(!activeTab) socket.emit('term_new'); });
+socket.on('disconnect', ()=>{ /* user can still create after reconnect */ });
+
+socket.on('term_created', d=>{
+  // server guarantees PTY created before emitting
+  buffers[d.tab] = '';
+  titles[d.tab] = 'Terminal ' + (tabCount++);
+  activeTab = d.tab;
+  renderTabs();
+  // open xterm only when visible
+  setTimeout(()=>{
+    if(!term.element || term.element.parentNode === null){
+      term.open(termEl);
     }
+    switchTab(activeTab);
+    // ensure fit after layout
+    setTimeout(()=>{ try{ fit.fit(); term.focus(); }catch(e){} }, 10);
+  }, 0);
+});
 
-    function removeTabUI(tab) {
-      const info = terminals[tab];
-      if (!info) return;
-      try { info.term.dispose(); } catch(e){}
-      try { info.container.remove(); } catch(e){}
-      try { info.button.remove(); } catch(e){}
-      delete terminals[tab];
-      // pick another tab to show
-      const keys = Object.keys(terminals);
-      if (keys.length) switchToTab(keys[0]);
-    }
+socket.on('term_output', d=>{
+  if(typeof buffers[d.tab] === 'undefined') return;
+  buffers[d.tab] += d.output;
+  if(d.tab === activeTab) term.write(d.output);
+});
 
-    // closeTab removes UI and notifies server to terminate; skipConfirm true -> no toast
-    function closeTab(tab, skipConfirm=false) {
-      if (!terminals[tab]) return;
-      if (!skipConfirm) {
-        // show toast confirm
-        pendingCloseTab = tab;
-        toastMsg.textContent = "Close tab " + tab.slice(0,8) + " and terminate its shell?";
-        showToast();
-        return;
-      }
+socket.on('term_exited', d=>{
+  // backend reports exit; close UI for that tab
+  delete buffers[d.tab];
+  delete titles[d.tab];
+  if(activeTab === d.tab){
+    const keys = Object.keys(buffers);
+    activeTab = keys.length ? keys[0] : null;
+    term.clear();
+    if(activeTab) term.write(buffers[activeTab]);
+  }
+  renderTabs();
+  updateView();
+});
 
-      // immediate close: emit to server then remove UI
-      try { socket.emit('term_close', { tab }); } catch(e){}
-      removeTabUI(tab);
-      // if toast was showing for same tab, hide it
-      if (pendingCloseTab === tab) {
-        pendingCloseTab = null;
-        hideToast();
-      }
-    }
+socket.on('term_closed', d=>{
+  // explicit close from backend
+  delete buffers[d.tab];
+  delete titles[d.tab];
+  if(activeTab === d.tab){
+    const keys = Object.keys(buffers);
+    activeTab = keys.length ? keys[0] : null;
+    term.clear();
+    if(activeTab) term.write(buffers[activeTab]);
+  }
+  renderTabs();
+  updateView();
+});
 
-    // show / hide toast
-    function showToast(){
-      toast.setAttribute('aria-hidden','false');
-      toast.classList.add('show');
-      // focus first actionable button
-      toastCancel.focus();
-    }
-    function hideToast(){
-      toast.classList.remove('show');
-      toast.setAttribute('aria-hidden','true');
-      pendingCloseTab = null;
-    }
+term.onData(data=>{
+  if(activeTab) socket.emit('term_input',{tab: activeTab, data});
+});
 
-    function createTabElement(tab, local_echo) {
-      // Button
-      const btn = document.createElement('div');
-      btn.className = 'tabbtn';
-      btn.setAttribute('data-tab', tab);
+btnNew.onclick = ()=>socket.emit('term_new');
 
-      const label = document.createElement('span');
-      label.className = 'tab-label';
-      label.textContent = tab.slice(0,8);
-      btn.appendChild(label);
-
-      const close = document.createElement('button');
-      close.className = 'closebtn';
-      close.title = 'Close tab';
-      close.innerText = '✕';
-      close.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        closeTab(tab, false); // will show toast
-      });
-      btn.appendChild(close);
-
-      btn.addEventListener('click', () => switchToTab(tab));
-      tabsEl.appendChild(btn);
-
-      // Terminal container
-      const cont = document.createElement('div');
-      cont.className = 'term-instance';
-      cont.id = 'term-' + tab;
-      termwrap.appendChild(cont);
-
-      // xterm
-      const term = new Terminal({ cursorBlink:true, convertEol:true, scrollback:2000 });
-      term.open(cont);
-      term.focus();
-
-      terminals[tab] = { term, container: cont, button: btn, closeBtn: close, local_echo: !!local_echo, lineBuf: "" };
-
-      // handle keypresses
-      term.onData(e => {
-        const info = terminals[tab];
-        if (info.local_echo) {
-          // backspace
-          if (e === '\x7f' || e === '\b') {
-            term.write('\b \b');
-            if (info.lineBuf.length) info.lineBuf = info.lineBuf.slice(0, -1);
-            socket.emit('term_input', { tab, data: '\x7f' });
-            return;
-          }
-          // enter
-          if (e === '\r' || e === '\n') {
-            const typed = info.lineBuf.replace(/\s+/g,' ').trim().toLowerCase();
-            if (typed === 'cls' || typed === 'clear') term.clear();
-            term.write('\r\n');
-            socket.emit('term_input', { tab, data: '\r' });
-            info.lineBuf = "";
-            return;
-          }
-          // printable
-          if (e >= ' ' && e <= '~') {
-            info.lineBuf += e;
-            term.write(e);
-          } else {
-            term.write(e);
-          }
-        }
-        // always forward to server
-        socket.emit('term_input', { tab, data: e });
-      });
-
-      // activate
-      switchToTab(tab);
-    }
-
-    // create new tab on button
-    newTabBtn.addEventListener('click', () => socket.emit('term_new'));
-
-    // server responses
-    socket.on('term_created', msg => {
-      const tab = msg.tab;
-      const local_echo = !!msg.local_echo;
-      createTabElement(tab, local_echo);
-    });
-
-    socket.on('term_output', msg => {
-      const tab = msg.tab;
-      const out = msg.output || "";
-      const info = terminals[tab];
-      if (!info) return;
-      try { info.term.write(out.replace(/\r?\n/g, '\r\n')); } catch(e){}
-
-      // detect exit markers and auto-close (no toast)
-      const exitMarkers = ["[terminal exited]", "[cmd exited]", "[process exited]", "[pty exited]", "[shell exited]", "[terminal closed]", "[terminal exited]"];
-      for (const m of exitMarkers) {
-        if (out.indexOf(m) !== -1) {
-          // give the UI a short moment for final output, then close
-          setTimeout(() => {
-            if (terminals[tab]) removeTabUI(tab); // server should also send term_closed
-            try { socket.emit('term_closed', { tab }); } catch(e){}
-          }, 120);
-          break;
-        }
-      }
-    });
-
-    // server explicitly closed
-    socket.on('term_closed', msg => {
-      const tab = msg.tab;
-      if (!tab) return;
-      // close without toast
-      removeTabUI(tab);
-    });
-
-    // toast button handlers
-    toastOK.addEventListener('click', () => {
-      if (!pendingCloseTab) { hideToast(); return; }
-      const t = pendingCloseTab;
-      pendingCloseTab = null;
-      hideToast();
-      // perform immediate close
-      try { socket.emit('term_close', { tab: t }); } catch(e){}
-      removeTabUI(t);
-    });
-
-    toastCancel.addEventListener('click', () => {
-      pendingCloseTab = null;
-      hideToast();
-    });
-
-    // keyboard shortcuts for confirm (Esc => cancel)
-    document.addEventListener('keydown', (e) => {
-      if (!toast.classList.contains('show')) return;
-      if (e.key === 'Escape') {
-        pendingCloseTab = null;
-        hideToast();
-      }
-    });
-
-    // auto-create a tab on connect
-    socket.on('connect', () => {
-      socket.emit('term_new');
-    });
-
-    // expose for debug
-    window._terminals = terminals;
-  })();
-  </script>
+updateView();
+</script>
 </body>
 </html>

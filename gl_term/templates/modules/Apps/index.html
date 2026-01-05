@@ -1,0 +1,35 @@
+<h2>apps</h2><br>
+<div class="app-grid">
+{% set result0 = os.listdir('./gl_term/templates/modules/Manager/Confs/') %}
+{% for a in result0 %}
+    {% set result1 = open('./gl_term/templates/modules/Manager/Confs/' + a).read() %}
+    {% set asd = result1.split('\n') %}
+    <div class="app-card"
+         oncontextmenu="
+            event.preventDefault();
+            Swal.fire({
+              title:`actions for {{ asd[0] }}`,
+              toast:true,
+              showDenyButton: true,
+              showCancelButton: true,
+              confirmButtonText: 'Start',
+              denyButtonText: 'Stop',
+              draggable: true
+            }).then((result) => {
+              if (result.isConfirmed) {
+                fetch('/termapi?cmd={{ asd[1] }}')
+                  .then(() => eval(''))
+                  .catch(() => Swal.fire('Error!', '', 'error'));
+              } else if (result.isDenied) {
+                fetch('/termapi?cmd={{ asd[2] }}')
+                  .then(() => eval(''))
+                  .catch(() => Swal.fire('Error!', '', 'error'));
+              }
+            });
+         "
+         onclick="window.open(`http://{{ ipaddr }}:{{ asd[3] }}`)">
+        <img src="/static/hl_icon/{{ asd[0].replace(' ','') }}.png" alt="Icony">
+        <div>{{ asd[0] }}</div>
+    </div>
+{% endfor %}
+</div>

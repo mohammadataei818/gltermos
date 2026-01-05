@@ -94,9 +94,9 @@
   {# ================= TEXT PREVIEW / EDIT ================= #}
 
   {% else %}
-    {% set lines = file | file_read_lines %}
+    {% set lines = open(file).read().split('\n') %}
 
-    <form action="/modules/Files/savefile">
+    <form method="POST" action="/modules/Files/savefile">
       <input type="hidden" name="file" value="{{ file }}">
 
       {% if lines and lines[0] == "File could not be read." %}
@@ -140,7 +140,8 @@
   <a class="btn btn-danger"
      href="javascript:void(0)"
      onclick="if (confirm('Delete file?')) {
-       ChangeContentMain('Files','/modules/Files/deleteapi?file={{ file | urlencode }}')
+       ChangeContentMain('Files','/deleteapi?file={{ file | urlencode }}');
+       ChangeContentMain('Files','/index')
      }">
     Delete
   </a>

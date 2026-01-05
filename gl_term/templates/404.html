@@ -1,3 +1,24 @@
+<style>
+    @font-face {
+    font-display: block;
+    font-family: JetBrainsMono;
+    font-style: normal;
+    font-weight: 400;
+    src: url(/static/JetBrainsMono-Regular.woff2) format("woff2")
+}
+*{font-family: JetBrainsMono;}
+</style>
+<h2>ERROR: 4 <SPAN class="rndtxt"></SPAN> 0 <span class="rndtxt"></span> 4 <span class="rndtxt"></span></h2>
 <script>
-let a = new Audio('/static/rickroll.mp4')
+    function try_to_ch_all_of_rnd_texts() {
+        lists = document.querySelectorAll('.rndtxt')
+        lens = lists
+        console.log(lens)
+        for (f of lists) {
+            random = String().replace('0.','').replace('1','>').replace('2','$').replace('3','#').replace('4','*').replace('5','(').replace('6',')').replace('7','^').replace('8','&').replace('9','%').replace('6','').replace('2','').replace('0','')
+            f.innerHTML = random
+        }
+    }
+    setInterval(try_to_ch_all_of_rnd_texts,200)
+    try_to_ch_all_of_rnd_texts()
 </script>
