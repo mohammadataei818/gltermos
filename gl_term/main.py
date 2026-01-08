@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import threading
 import subprocess
@@ -159,6 +160,141 @@ TEMPLATE_PREFIXES = [
     "gl_term/modules",
     "modules",
 ]
+def check_path(path: str):
+    """
+    Checks if the path is accessible.
+    Returns:
+      - True if path is readable
+      - Error string if an exception occurs
+    """
+    try:
+        if os.path.isdir(path):
+            os.listdir(path)  # Test read
+        elif os.path.isfile(path):
+            open(path, 'rb').close()
+        else:
+            return f"Path does not exist"
+        return True
+    except Exception as e:
+        return str(e)
+
+# Expose request to templates
+app.jinja_env.globals['request'] = request
+
+# Helper to get list of drives (Windows) or root (Linux)
+import os
+import sys
+from urllib.parse import quote_plus
+
+def build_breadcrumbs(path: str):
+    """
+    Return list of (label, url) tuples for breadcrumbs.
+    Works for Windows drive roots (C:/...) and Linux (/...).
+    Example:
+      "C:/Users/me/docs" -> [("C:/","C:/"), ("Users","C:/Users"), ("me","C:/Users/me"), ("docs","C:/Users/me/docs")]
+      "/home/me" -> [("/", "/"), ("home", "/home"), ("me", "/home/me")]
+    """
+    if path is None:
+        path = ("C:/" if sys.platform.startswith("win") else "/")
+
+    # normalize separators
+    norm = path.replace("\\", "/")
+    # remove duplicate slashes
+    while '//' in norm:
+        norm = norm.replace('//', '/')
+    # strip trailing slash except keep root "/"
+    if norm != '/' and norm.endswith('/'):
+        norm = norm.rstrip('/')
+
+    crumbs = []
+
+    # Windows drive-root handling
+    if sys.platform.startswith("win"):
+        # e.g. "C:", "C:/", "C:/Users", "C:/Users/me"
+        # ensure we have at least "C:/" style for drive roots
+        if len(norm) >= 2 and norm[1] == ':':
+            drive = norm[:2] + '/'
+            rest = norm[3:] if norm.startswith(drive) else norm[2:].lstrip('/')
+            # add drive root crumb
+            crumbs.append((drive, drive))
+            if rest:
+                parts = rest.split('/')
+                acc = drive.rstrip('/')  # "C:"
+                for p in parts:
+                    acc = acc + '/' + p
+                    crumbs.append((p, acc))
+            return crumbs
+        # fallback: not recognized as drive letter -> treat normally below
+
+    # POSIX / and generic path handling
+    if norm == '' or norm == '/':
+        return [('/', '/')]
+    parts = norm.split('/')
+    # if absolute path (leading ''), make root crumb
+    if parts and parts[0] == '':
+        acc = '/'
+        crumbs.append(('/', '/'))
+        parts = parts[1:]
+    else:
+        acc = parts[0]
+        crumbs.append((parts[0], acc))
+        parts = parts[1:]
+
+    for p in parts:
+        if acc == '/':
+            acc = '/' + p
+        else:
+            acc = acc.rstrip('/') + '/' + p
+        crumbs.append((p, acc))
+
+    return crumbs
+
+# expose to jinja
+app.jinja_env.globals['build_breadcrumbs'] = build_breadcrumbs
+
+def get_volumes():
+    vols = []
+    if sys.platform.startswith("win"):
+        import ctypes
+
+        # Get bitmask of drives that are ready
+        drives_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
+        for i in range(26):
+            if drives_bitmask & (1 << i):
+                drive = f"{chr(65 + i)}:/"
+                try:
+                    ready = os.path.exists(drive)
+                except Exception:
+                    ready = False
+                vols.append({"path": drive, "ready": ready})
+    else:
+        # Linux root ("/") and optionally /mnt or /media
+        vols.append({"path": "/", "ready": True})
+    return vols
+
+app.jinja_env.globals['get_volumes'] = get_volumes
+
+# Helper to list directory contents safely
+def list_dir_safe(path):
+    try:
+        entries = []
+        for entry in os.listdir(path):
+            full = os.path.join(path, entry)
+            entries.append({
+                "name": entry,
+                "path": full,
+                "is_dir": os.path.isdir(full),
+                "is_file": os.path.isfile(full),
+                "size": os.path.getsize(full) if os.path.isfile(full) else None,
+                "mtime": os.path.getmtime(full)
+            })
+        return entries
+    except Exception as e:
+        return str(e)  # Return error string
+app.jinja_env.globals['list_dir_safe'] = list_dir_safe
+# Expose to templates
+app.jinja_env.globals["check_path"] = check_path
+
 @app.route('/api_fetchfile/<path:path>')
 def api_fetchdata(path):
     # if not is_authenticated():

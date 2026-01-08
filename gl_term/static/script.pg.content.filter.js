@@ -16,13 +16,64 @@ function renderNavBar() {
     let sidebar = document.querySelector('.sidebar')
     sidebar.innerHTML = `
     <br><br>
-    <a class="mobcap" onclick="document.querySelector('.sidebar').style.display = null;document.querySelector('.app').style.display = null" href="javascript:void(0)">Close Menu</a>
-        <div class="sidebar-item" onclick="ChangeContentMain('Apps')">Home</div>
-        <div class="sidebar-item" onclick="FetchData('/apisettings/chpass')">Ch Pass</div>
-        <div class="sidebar-item" onclick="ChangeContentMain('Files')">Files</div>
-         <div class="sidebar-item" onclick="ChangeContentMain('Terminal')">Terminal</div>
-        <div class="sidebar-item" onclick="location.href='/logout'">Logout</div>
-    `;
+    <div class="fixed top-0 left-0 h-full w-60 bg-gray-1000 p-4 flex flex-col space-y-2">
+    <!-- Spacing at the top -->
+    <div class="pt-6"></div>
+
+    <!-- Close Menu Link -->
+    <a 
+        class="mobcap text-blue-400 hover:text-blue-200 cursor-pointer mb-4"
+        onclick="document.querySelector('.sidebar').style.display = 'none'; document.querySelector('.app').style.display = 'block';"
+        href="javascript:void(0)">
+        Close Menu
+    </a>
+
+    <!-- Home -->
+    <div 
+    style="padding: 8px 8px;"
+        class="flex items-center p-2 rounded hover:bg-blue-600 hover:text-white cursor-pointer"
+        onclick="ChangeContentMain('Apps')">
+        <i class="fa fa-home w-6"></i>
+        <span class="ml-2">Home</span>
+    </div>
+
+    <!-- Ch Pass -->
+    <div 
+    style="padding: 8px 8px;"
+        class="flex items-center p-2 rounded hover:bg-blue-600 hover:text-white cursor-pointer"
+        onclick="FetchData('/apisettings/chpass')">
+        <i class="fa fa-eye-slash w-6"></i>
+        <span class="ml-2">Ch Pass</span>
+    </div>
+
+    <!-- Files -->
+    <div 
+    style="padding: 8px 8px;"
+        class="flex items-center p-2 rounded hover:bg-blue-600 hover:text-white cursor-pointer"
+        onclick="ChangeContentMain('Files')">
+        <i class="fa fa-folder-open w-6"></i>
+        <span class="ml-2">Files</span>
+    </div>
+
+    <!-- Terminal -->
+    <div 
+    style="padding: 8px 8px;"
+        class="flex items-center p-2 rounded hover:bg-blue-600 hover:text-white cursor-pointer"
+        onclick="ChangeContentMain('Terminal')">
+        <i class="fa fa-terminal w-6"></i>
+        <span class="ml-2">Terminal</span>
+    </div>
+
+    <!-- Logout -->
+    <div 
+    style="padding: 8px 8px;"
+        class="flex items-center rounded hover:bg-blue-600 hover:text-white cursor-pointer"
+        onclick="location.href='/logout'">
+        <i class="fa fa-sign-out w-6"></i>
+        <span class="ml-2">Logout</span>
+    </div>
+</div>`
+;
 }
 wireUpNavItems()
 

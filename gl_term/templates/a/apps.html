@@ -2,16 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>gl_term</title>
+    <title>Control</title>
     <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="/static/fa-fontawesome/css/font-awesome.min.css">
+    <script src="/static/tailwindcss.js"></script>
     <link rel="stylesheet" href="/static/index.css">
 </head>
 <body>
-    <div class="sdc-app"></div><button onclick="document.querySelector('.sidebar').style.display = 'ruby-text';document.querySelector('.app').style.display = 'none'" class="mobcap btn">HAMBRUG</button>
+    <div class="hidden
+  p-2 p-3 p-4 p-5 p-6 p-8
+  pt-2 pt-4 pb-2 pb-4
+  px-2 px-4 py-2 py-4
+  text-sm text-base text-lg
+  w-10 w-20 w-40 h-10 h-20 h-40
+  hover:bg-[var(--accent-hover)]
+  hover:text-white
+  drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]
+  rounded-[var(--radius)]
+  shadow-lg
+"></div>
+
+    <div class="sdc-app"></div><button onclick="document.querySelector('.sidebar').style.display = 'ruby-text';document.querySelector('.app').style.display = 'none'" class="mobcap btn"><i class="fa fa-bars"></i></button>
     <div class="app"></div>
+
 </body>
 </html>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="/static/sweetalert2.js"></script>
 <script src="/static/script.pg.content.filter.js"></script>
 {% for i in get_flashed_messages() %}
 <script>

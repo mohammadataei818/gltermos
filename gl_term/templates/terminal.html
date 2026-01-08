@@ -45,9 +45,9 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 
 <div class="modal-backdrop" id="close-modal"><div class="modal"><h3>Close this tab?</h3><p>This will terminate the running shell.</p><div class="modal-actions"><button class="btn-cancel" onclick="closeClose()">Cancel</button><button class="btn-danger" onclick="applyClose()">Close</button></div></div></div>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
+<script src="/static/socket.io.js"></script>
+<script src="/static/xterm.js"></script>
+<script src="/static/xterm-addon-fit.js"></script>
 
 <script>
 const term = new Terminal({cursorBlink:true,scrollback:10000,convertEol:true});

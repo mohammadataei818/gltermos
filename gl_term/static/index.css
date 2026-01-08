@@ -37,7 +37,6 @@ body {
     background: url(/static/wallpapers/1.png);
     color: var(--text-primary);
     height: 100vh;
-    overflow: hidden;
 }
 
 body.no {
@@ -61,7 +60,7 @@ body.no {
 .app h2 {
     border-radius: 3px;
     left: 1%;
-    top: 3%;
+    bottom: 3%;
     position: absolute;
 }
 
@@ -76,132 +75,6 @@ input {
 
 input:hover {
     border: 1px solid #00fff2;
-}
-
-.sidebar-header {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 1.2rem;
-}
-
-.sidebar-item {
-    display: flex;
-    align-items: center;
-    padding: 0.6rem 0.8rem;
-    cursor: pointer;
-    border-radius: var(--radius);
-    transition: background var(--transition);
-    color: var(--text-primary);
-}
-
-.sidebar-item:hover,
-.sidebar-item.active {
-    background: var(--accent-hover);
-    color: #fff;
-}
-
-.sidebar-item img {
-    width: 24px;
-    margin-right: 0.8rem;
-}
-
-/* App Grid */
-/* Inline App Grid */
-.app-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding-top: 1rem;
-    align-items: flex-start;
-}
-
-/* App Card */
-.app-card {
-    background: linear-gradient(180deg,
-            rgba(255, 255, 255, 0.02),
-            rgba(0, 0, 0, 0.15)), var(--bg-panel);
-
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    padding: 1rem 0.75rem 0.85rem;
-    text-align: center;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0.5rem;
-
-    cursor: pointer;
-    transition:
-        transform var(--transition),
-        box-shadow var(--transition),
-        border-color var(--transition),
-        background var(--transition);
-}
-
-/* Hover / Focus */
-.app-card:hover,
-.app-card:focus-within {
-    transform: translateY(-4px) scale(1.03);
-    box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.4),
-        inset 0 0 0 1px var(--accent-hover);
-    border-color: var(--accent-hover);
-}
-
-/* App Icon */
-.app-card img {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto 0.35rem;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-}
-
-/* App Title */
-.app-card>div {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-primary);
-    line-height: 1.2;
-    margin-bottom: 0.25rem;
-    word-break: break-word;
-}
-
-/* Optional metadata (version, category, etc.) */
-.app-card small {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-}
-
-/* Buttons */
-.app-card button {
-    background: var(--accent);
-    color: #fff;
-    padding: 0.45rem 0.75rem;
-    border: none;
-    border-radius: calc(var(--radius) - 2px);
-    cursor: pointer;
-
-    font-size: 0.75rem;
-    font-weight: 500;
-
-    transition:
-        background var(--transition),
-        transform var(--transition),
-        box-shadow var(--transition);
-}
-
-.app-card button:hover {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-}
-
-.app-card button:active {
-    transform: translateY(0);
-    box-shadow: none;
 }
 
 
@@ -265,9 +138,18 @@ input:hover {
     .mobcap {
         display: unset;
     }
+        .app h2 {
+        position: relative;
+        margin: 2px 2px;
+    }
 
     .app {
         margin-left: 0;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: 100%;
     }
 }
 

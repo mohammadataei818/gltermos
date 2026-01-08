@@ -1,35 +1,134 @@
-<h2>apps</h2><br>
-<div class="app-grid">
+
+<body class="bg-black text-white">
+
+<!-- ===================================================== -->
+<!-- TAILWIND CDN CLASS FORCE (CRITICAL FOR FLASK + CDN) -->
+<!-- ===================================================== -->
+<!-- This ensures p-8 / p-6 / etc actually exist -->
+<div class="hidden p-8 p-6 p-4 px-6 py-6 pt-6 pb-6"></div>
+
+<!-- ===================================================== -->
+<!-- CONTEXT MENU (DEFINED ONCE) -->
+<!-- ===================================================== -->
+<div
+  id="tw-context-menu"
+  class="hidden fixed z-50 w-40 rounded-md border
+         bg-[var(--bg-panel)]
+         text-sm text-[var(--text-primary)]
+         shadow-lg"
+  role="menu"
+>
+  <div id="tw-context-title" style="display: none;"></div>
+
+  <button
+    id="tw-context-start"
+    role="menuitem"
+    class="w-full text-left px-3 py-2 transition
+           hover:bg-[var(--accent-hover)] hover:text-white" style="padding: 5px 5px;">
+    Start
+  </button>
+
+  <button
+    id="tw-context-stop"
+    role="menuitem"
+    class="w-full text-left px-3 py-2 transition
+           hover:bg-[var(--accent-hover)] hover:text-white" style="padding: 5px 5px;">
+    Stop
+  </button>
+
+  <button
+    id="tw-context-cancel"
+    role="menuitem"
+    class="hidden w-full text-left px-3 py-2 text-red-400 transition
+           hover:bg-red-500 hover:text-white">
+    Cancel
+  </button>
+</div>
+
+<!-- ===================================================== -->
+<!-- APP GRID -->
+<!-- ===================================================== -->
+<div class="flex flex-wrap gap-4 pt-4 items-start">
+
 {% set result0 = os.listdir('./gl_term/templates/modules/Manager/Confs/') %}
 {% for a in result0 %}
-    {% set result1 = open('./gl_term/templates/modules/Manager/Confs/' + a).read() %}
-    {% set asd = result1.split('\n') %}
-    <div class="app-card"
-         oncontextmenu="
-            event.preventDefault();
-            Swal.fire({
-              title:`actions for {{ asd[0] }}`,
-              toast:true,
-              showDenyButton: true,
-              showCancelButton: true,
-              confirmButtonText: 'Start',
-              denyButtonText: 'Stop',
-              draggable: true
-            }).then((result) => {
-              if (result.isConfirmed) {
-                fetch('/termapi?cmd={{ asd[1] }}')
-                  .then(() => eval(''))
-                  .catch(() => Swal.fire('Error!', '', 'error'));
-              } else if (result.isDenied) {
-                fetch('/termapi?cmd={{ asd[2] }}')
-                  .then(() => eval(''))
-                  .catch(() => Swal.fire('Error!', '', 'error'));
-              }
-            });
-         "
-         onclick="window.open(`http://{{ ipaddr }}:{{ asd[3] }}`)">
-        <img src="/static/hl_icon/{{ asd[0].replace(' ','') }}.png" alt="Icony">
-        <div>{{ asd[0] }}</div>
+  {% set result1 = open('./gl_term/templates/modules/Manager/Confs/' + a).read() %}
+  {% set asd = result1.split('\n') %}
+
+  <div
+    class="relative flex flex-col justify-between gap-2
+           cursor-pointer select-none
+           rounded-[var(--radius)]
+           border border-[var(--border)]
+           p-6 text-center
+           transition-transform transition-shadow transition-colors
+           hover:-translate-y-[4px] hover:scale-[1.03]
+           hover:border-[var(--accent-hover)]
+           hover:shadow-[0_10px_30px_rgba(0,0,0,0.4),_inset_0_0_0_1px_var(--accent-hover)]"
+    style="padding: 10px 10px;background: #121212;"
+
+    data-title="{{ asd[0] }}"
+    data-start="{{ asd[1] }}"
+    data-stop="{{ asd[2] }}"
+
+    oncontextmenu="
+      event.preventDefault();
+
+      const menu   = document.getElementById('tw-context-menu');
+      const title  = document.getElementById('tw-context-title');
+      const start  = document.getElementById('tw-context-start');
+      const stop   = document.getElementById('tw-context-stop');
+      const cancel = document.getElementById('tw-context-cancel');
+
+      title.textContent = this.dataset.title;
+
+      start.onclick = () => {
+        fetch('/termapi?cmd=' + this.dataset.start);
+        menu.classList.add('hidden');
+      };
+
+      stop.onclick = () => {
+        fetch('/termapi?cmd=' + this.dataset.stop);
+        menu.classList.add('hidden');
+      };
+
+      cancel.onclick = () => {
+        menu.classList.add('hidden');
+      };
+
+      menu.style.left = event.clientX + 'px';
+      menu.style.top  = event.clientY + 'px';
+      menu.classList.remove('hidden');
+
+      const close = () => {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', close);
+        document.removeEventListener('keydown', esc);
+      };
+
+      const esc = e => e.key === 'Escape' && close();
+
+      setTimeout(() => document.addEventListener('click', close), 0);
+      document.addEventListener('keydown', esc);
+    "
+
+    onclick="window.open(`http://{{ ipaddr }}:{{ asd[3] }}`)"
+  >
+    <img
+      src="/static/hl_icon/{{ asd[0].replace(' ','') }}.png"
+      alt="Icon"
+      class="w-[56px] h-[56px] mx-auto mb-2
+             object-contain
+             drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]" style="text-align: center;"
+    >
+
+    <div class="text-sm font-medium leading-tight break-words">
+      {{ asd[0] }}
     </div>
+  </div>
+
 {% endfor %}
 </div>
+
+</body>
+</html>
